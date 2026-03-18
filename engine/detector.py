@@ -1,49 +1,85 @@
-"""This module handles the image cleaning, grid detection, and object detection for the AI."""
+"""
+This module handles geometric contour detection for grid sizing 
+and YOLOv8 for object recognition.
+"""
 import cv2
 import numpy as np
 import streamlit as st
 
 
 def clean_captcha_image(image_pil):
-    """The Digital Car Wash: Cleans the blurry CAPTCHA for the AI."""
+    """The Digital Car Wash: Prepares the image for contour detection."""
     img_array = np.array(image_pil)
     gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    # Equalize contrast to make the grid lines stand out from the background
     contrast = cv2.equalizeHist(gray)
     cleaned_img = cv2.bilateralFilter(contrast, 9, 75, 75)
     return cleaned_img
 
 
 def detect_grid_size(cleaned_image):
-    """Analyzes the sharp lines to guess if it's a 3x3 or 4x4 grid."""
-    edges = cv2.Canny(cleaned_image, 50, 150, apertureSize=3)
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180,
-                            threshold=100, minLineLength=100, maxLineGap=10)
+    """
+    Industry-Level: Detects grid size by finding square-like contours (cells).
+    This ignores linear noise like power lines or crosswalks.
+    """
+    # 1. Create a binary 'map' of the image
+    thresh = cv2.adaptiveThreshold(cleaned_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY_INV, 11, 2)
 
-    if lines is None:
-        return 3
-    # Adjusted the math slightly so it doesn't get confused by the white gaps!
-    if len(lines) > 30:
+    # 2. Find all closed shapes
+    contours, _ = cv2.findContours(
+        thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    square_areas = []
+    img_h, img_w = cleaned_image.shape
+    total_area = img_h * img_w
+
+    for cnt in contours:
+        # Check if the shape is roughly a rectangle
+        peri = cv2.arcLength(cnt, True)
+        approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
+
+        # If it has 4 corners, it's a candidate for a grid cell
+        if len(approx) == 4:
+            x, y, w, h = cv2.boundingRect(approx)
+            area = w * h
+            aspect_ratio = float(w) / h
+
+            # Filter: Cell must be square-ish (0.8 to 1.2 ratio)
+            # and occupy a reasonable percentage of the total image
+            if 0.7 < aspect_ratio < 1.3:
+                if (total_area * 0.01) < area < (total_area * 0.25):
+                    square_areas.append(area)
+
+    # 3. Statistical Logic: If we found enough squares, calculate the grid
+    if not square_areas:
+        return 3  # Default to standard 3x3 if detection is too blurry
+
+    avg_cell_area = np.median(square_areas)
+    estimated_cells = total_area / avg_cell_area
+
+    # Mapping the area ratio to the most likely grid dimension
+    if 13 <= estimated_cells <= 22:
         return 4
+    elif 6 <= estimated_cells <= 12:
+        return 3
+    elif 23 <= estimated_cells <= 30:
+        return 5
     else:
         return 3
-
-# --- THE SPEED FIX: LAZY LOADING & CACHING ---
 
 
 @st.cache_resource
 def load_yolo_model():
-    """Loads the heavy AI brain ONLY ONCE and keeps it in memory."""
-    # We move the import inside here so the web page doesn't wait for it!
+    """Loads and caches the YOLOv8 Nano model."""
     from ultralytics import YOLO
     return YOLO('yolov8n.pt')
 
 
-def detect_objects(image_pil, target_name):
-    """Brain 2: Uses YOLO to find objects and returns their bounding boxes."""
-    # Instantly grabs the model from memory instead of reloading it
+def detect_objects(image_pil, target_name, conf=0.25):
+    """Brain 2: Uses YOLOv8 with user-defined confidence."""
     model = load_yolo_model()
-
-    results = model.predict(source=image_pil, conf=0.25)
+    results = model.predict(source=image_pil, conf=conf, verbose=False)
     result = results[0]
 
     target_boxes = []
@@ -55,37 +91,23 @@ def detect_objects(image_pil, target_name):
     return result, target_boxes
 
 
-def map_boxes_to_grid(image_pil, target_boxes, grid_size=3):
-    """Calculates exactly which grid squares the YOLO boxes overlap with."""
+def map_boxes_to_grid(image_pil, target_boxes, grid_size):
+    """Calculates grid cell numbers (1 to N) based on object coordinates."""
     width, height = image_pil.size
+    cell_w, cell_h = width / grid_size, height / grid_size
+    squares = set()
 
-    # Calculate the exact pixel size of a single grid cell
-    cell_width = width / grid_size
-    cell_height = height / grid_size
-
-    squares_to_click = set()
-
-    # Loop through every box YOLO found
     for box in target_boxes:
         x_min, y_min, x_max, y_max = box
-
-        # Check every single square in the grid (1 through 9)
-        square_number = 1
+        square_num = 1
         for row in range(grid_size):
             for col in range(grid_size):
-                # Calculate the boundaries of this specific grid square
-                cell_x_min = col * cell_width
-                cell_y_min = row * cell_height
-                cell_x_max = (col + 1) * cell_width
-                cell_y_max = (row + 1) * cell_height
+                c_x_min, c_y_min = col * cell_w, row * cell_h
+                c_x_max, c_y_max = (col + 1) * cell_w, (row + 1) * cell_h
 
-                # OVERLAP MATH: Check if the YOLO box touches this grid square
-                if (x_min < cell_x_max and x_max > cell_x_min and
-                        y_min < cell_y_max and y_max > cell_y_min):
-
-                    squares_to_click.add(square_number)
-
-                square_number += 1
-
-    # Return a neatly sorted list of the squares (e.g., [2, 3, 5])
-    return sorted(list(squares_to_click))
+                # Check for overlap between the YOLO box and the grid cell
+                if (x_min < c_x_max and x_max > c_x_min and
+                        y_min < c_y_max and y_max > c_y_min):
+                    squares.add(square_num)
+                square_num += 1
+    return sorted(list(squares))
