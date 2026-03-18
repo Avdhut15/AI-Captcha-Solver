@@ -1,0 +1,11 @@
+# Python Cache
+__pycache__/
+*.pyc
+
+# AI Models (We don't upload heavy brains!)
+*.pt
+*.onnx
+
+# Virtual Environments (If you use them later)
+venv/
+.env
