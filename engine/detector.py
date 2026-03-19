@@ -1,6 +1,6 @@
 """
-This module handles geometric contour detection for grid sizing 
-and YOLOv8 for object recognition.
+This module handles geometric contour detection for grid sizing,
+YOLOv8 for object recognition, and visual result rendering.
 """
 import cv2
 import numpy as np
@@ -11,22 +11,15 @@ def clean_captcha_image(image_pil):
     """The Digital Car Wash: Prepares the image for contour detection."""
     img_array = np.array(image_pil)
     gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-    # Equalize contrast to make the grid lines stand out from the background
     contrast = cv2.equalizeHist(gray)
     cleaned_img = cv2.bilateralFilter(contrast, 9, 75, 75)
     return cleaned_img
 
 
 def detect_grid_size(cleaned_image):
-    """
-    Industry-Level: Detects grid size by finding square-like contours (cells).
-    This ignores linear noise like power lines or crosswalks.
-    """
-    # 1. Create a binary 'map' of the image
+    """Detects grid size by finding square-like contours (cells)."""
     thresh = cv2.adaptiveThreshold(cleaned_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY_INV, 11, 2)
-
-    # 2. Find all closed shapes
     contours, _ = cv2.findContours(
         thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -35,30 +28,22 @@ def detect_grid_size(cleaned_image):
     total_area = img_h * img_w
 
     for cnt in contours:
-        # Check if the shape is roughly a rectangle
         peri = cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
-
-        # If it has 4 corners, it's a candidate for a grid cell
         if len(approx) == 4:
             x, y, w, h = cv2.boundingRect(approx)
             area = w * h
             aspect_ratio = float(w) / h
-
-            # Filter: Cell must be square-ish (0.8 to 1.2 ratio)
-            # and occupy a reasonable percentage of the total image
             if 0.7 < aspect_ratio < 1.3:
                 if (total_area * 0.01) < area < (total_area * 0.25):
                     square_areas.append(area)
 
-    # 3. Statistical Logic: If we found enough squares, calculate the grid
     if not square_areas:
-        return 3  # Default to standard 3x3 if detection is too blurry
+        return 3
 
     avg_cell_area = np.median(square_areas)
     estimated_cells = total_area / avg_cell_area
 
-    # Mapping the area ratio to the most likely grid dimension
     if 13 <= estimated_cells <= 22:
         return 4
     elif 6 <= estimated_cells <= 12:
@@ -71,13 +56,12 @@ def detect_grid_size(cleaned_image):
 
 @st.cache_resource
 def load_yolo_model():
-    """Loads and caches the YOLOv8 Nano model."""
     from ultralytics import YOLO
     return YOLO('yolov8n.pt')
 
 
 def detect_objects(image_pil, target_name, conf=0.25):
-    """Brain 2: Uses YOLOv8 with user-defined confidence."""
+    """Uses YOLOv8 to find objects on a CPU-friendly budget."""
     model = load_yolo_model()
     results = model.predict(source=image_pil, conf=conf, verbose=False)
     result = results[0]
@@ -92,7 +76,7 @@ def detect_objects(image_pil, target_name, conf=0.25):
 
 
 def map_boxes_to_grid(image_pil, target_boxes, grid_size):
-    """Calculates grid cell numbers (1 to N) based on object coordinates."""
+    """Calculates grid cell numbers (1 to N)."""
     width, height = image_pil.size
     cell_w, cell_h = width / grid_size, height / grid_size
     squares = set()
@@ -105,9 +89,45 @@ def map_boxes_to_grid(image_pil, target_boxes, grid_size):
                 c_x_min, c_y_min = col * cell_w, row * cell_h
                 c_x_max, c_y_max = (col + 1) * cell_w, (row + 1) * cell_h
 
-                # Check for overlap between the YOLO box and the grid cell
                 if (x_min < c_x_max and x_max > c_x_min and
                         y_min < c_y_max and y_max > c_y_min):
                     squares.add(square_num)
                 square_num += 1
     return sorted(list(squares))
+
+
+def draw_visual_results(image_pil, grid_size, selected_squares):
+    """Draws red grid and highlights target squares in green."""
+    # Convert PIL to OpenCV format
+    img = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
+    h, w, _ = img.shape
+    cell_w, cell_h = w / grid_size, h / grid_size
+
+    # Create a copy for the transparent overlay
+    overlay = img.copy()
+
+    # 1. Draw the Red Grid lines
+    for i in range(1, grid_size):
+        # Vertical
+        cv2.line(img, (int(i * cell_w), 0),
+                 (int(i * cell_w), h), (0, 0, 255), 2)
+        # Horizontal
+        cv2.line(img, (0, int(i * cell_h)),
+                 (w, int(i * cell_h)), (0, 0, 255), 2)
+
+    # 2. Highlight selected squares in green
+    square_num = 1
+    for row in range(grid_size):
+        for col in range(grid_size):
+            if square_num in selected_squares:
+                pt1 = (int(col * cell_w), int(row * cell_h))
+                pt2 = (int((col + 1) * cell_w), int((row + 1) * cell_h))
+                cv2.rectangle(overlay, pt1, pt2, (0, 255, 0), -1)
+            square_num += 1
+
+    # 3. Blend the images for transparency
+    alpha = 0.35
+    result_img = cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)
+
+    # Convert back to RGB for Streamlit
+    return cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
