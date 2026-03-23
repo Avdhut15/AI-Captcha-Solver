@@ -1,13 +1,7 @@
 """The professional Streamlit interface with Visual Overlay support."""
 import streamlit as st
 from PIL import Image
-from engine.detector import (
-    clean_captcha_image,
-    detect_grid_size,
-    detect_objects,
-    map_boxes_to_grid,
-    draw_visual_results
-)
+from engine.captcha_engine import create_engine
 
 st.set_page_config(page_title="AI CAPTCHA Solver", layout="wide")
 
@@ -38,30 +32,23 @@ if uploaded_file:
 
     if st.button("🚀 Run AI Solver", type="primary"):
         with st.spinner("Analyzing..."):
-            # 1. Image Cleaning
-            cleaned = clean_captcha_image(img)
-
-            # 2. Grid logic
-            auto_size = detect_grid_size(cleaned)
-            grid_size = manual_grid if manual_grid > 0 else auto_size
-
-            # 3. Detection
-            yolo_result, boxes = detect_objects(
-                img, target_object, conf=conf_val)
+            # Create engine and solve
+            engine = create_engine()
+            result = engine.solve(
+                img,
+                target_object=target_object,
+                conf=conf_val,
+                manual_grid=manual_grid if manual_grid > 0 else None
+            )
 
             with col2:
-                if len(boxes) > 0:
-                    squares = map_boxes_to_grid(img, boxes, grid_size)
-
-                    # 4. Generate Visual Overlay
-                    visual_img = draw_visual_results(img, grid_size, squares)
-
-                    st.success(f"Grid: {grid_size}x{grid_size}")
-                    st.markdown(f"### 👉 **Click Squares: {squares}**")
-
-                    # Show the Result Image
+                if result['success']:
+                    st.success(
+                        f"Grid: {result['grid_size']}x{result['grid_size']}")
+                    st.markdown(
+                        f"### 👉 **Click Squares: {result['solution']}**")
                     st.image(
-                        visual_img, caption="AI Solution (Grid + Highlights)", use_container_width=True)
+                        result['visual'], caption="AI Solution (Grid + Highlights)", use_container_width=True)
                 else:
                     st.error(f"AI could not find any '{target_object}'.")
                     st.info("Try lowering the Confidence slider in the sidebar.")
