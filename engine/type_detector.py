@@ -4,12 +4,12 @@ Identifies the type of captcha challenge (grid-based, text-based, math-based, et
 """
 
 
-def detect_captcha_type(image_pil):
+def detect_captcha_type(_image_pil):
     """
     Detects the type of captcha challenge.
 
     Args:
-        image_pil: PIL Image object
+        _image_pil: PIL Image object
 
     Returns:
         str: Type of captcha ('grid', 'text', 'math', 'unknown')
@@ -34,13 +34,10 @@ def get_solver_for_type(captcha_type):
         module: The solver module to use
     """
     if captcha_type == 'grid':
-        from engine.grid_solver import detect_grid_size, detect_objects, map_boxes_to_grid
         return 'grid'
     elif captcha_type == 'text':
-        from engine.text_solver import solve_text_captcha
         return 'text'
     elif captcha_type == 'math':
-        from engine.math_solver import solve_math_captcha
         return 'math'
     else:
         return 'grid'  # Default fallback

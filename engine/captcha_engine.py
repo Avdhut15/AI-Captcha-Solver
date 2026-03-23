@@ -3,7 +3,7 @@ Main CAPTCHA solver engine.
 Routes requests to appropriate solvers based on captcha type.
 Coordinates image preprocessing, detection, and result delivery.
 """
-from PIL import Image
+
 from engine.detector import clean_captcha_image
 from engine.grid_solver import (
     detect_grid_size,
@@ -62,7 +62,7 @@ class CaptchaEngine:
             self.grid_size = manual_grid if manual_grid and manual_grid > 0 else auto_grid
 
             # 4. Detect objects
-            yolo_result, self.target_boxes = detect_objects(
+            _, self.target_boxes = detect_objects(
                 image_pil, target_object, conf=conf
             )
 
@@ -86,8 +86,8 @@ class CaptchaEngine:
                 result['message'] = f"No '{target_object}' objects detected. Try lowering confidence."
                 result['visual'] = image_pil
 
-        except Exception as e:
-            result['message'] = f"Error during solving: {str(e)}"
+        except Exception as error:  # pylint: disable=broad-except
+            result['message'] = f"Error during solving: {str(error)}"
             result['visual'] = image_pil
 
         return result

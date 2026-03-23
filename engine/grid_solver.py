@@ -37,7 +37,7 @@ def detect_grid_size(cleaned_image):
         peri = cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
         if len(approx) == 4:
-            x, y, w, h = cv2.boundingRect(approx)
+            _, _, w, h = cv2.boundingRect(approx)
             area = w * h
             aspect_ratio = float(w) / h
             if 0.7 < aspect_ratio < 1.3:

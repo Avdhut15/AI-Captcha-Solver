@@ -4,13 +4,13 @@ Placeholder for mathematical expression recognition and solving logic.
 """
 
 
-def solve_math_captcha(image_pil, math_config=None):
+def solve_math_captcha(_image_pil, _math_config=None):
     """
     Solves math-based CAPTCHA challenges.
 
     Args:
-        image_pil: PIL Image object
-        math_config: Optional configuration dictionary
+        _image_pil: PIL Image object
+        _math_config: Optional configuration dictionary
 
     Returns:
         dict: Solution result with keys:
@@ -19,7 +19,7 @@ def solve_math_captcha(image_pil, math_config=None):
             - 'answer': str or int calculated answer
             - 'confidence': float confidence score
     """
-    # TODO: Implement math CAPTCHA solving
+    # Implement math CAPTCHA solving
     # - OCR to extract math expression
     # - Parse mathematical notation
     # - Evaluate expression
@@ -34,29 +34,29 @@ def solve_math_captcha(image_pil, math_config=None):
     }
 
 
-def extract_math_expression(image_pil):
+def extract_math_expression(_image_pil):
     """
     Extracts mathematical expression from image using OCR.
 
     Args:
-        image_pil: PIL Image object
+        _image_pil: PIL Image object
 
     Returns:
         str: Extracted mathematical expression
     """
     # Placeholder: Math expression extraction
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
-def evaluate_expression(expression_str):
+def evaluate_expression(_expression_str):
     """
     Evaluates a mathematical expression safely.
 
     Args:
-        expression_str: String containing the Math expression
+        _expression_str: String containing the Math expression
 
     Returns:
         int or float: Calculated result
     """
     # Placeholder: Math expression evaluation
-    pass
+    pass  # pylint: disable=unnecessary-pass

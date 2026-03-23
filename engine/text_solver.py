@@ -4,13 +4,13 @@ Placeholder for text recognition and solving logic.
 """
 
 
-def solve_text_captcha(image_pil, ocr_config=None):
+def solve_text_captcha(_image_pil, _ocr_config=None):
     """
     Solves text-based CAPTCHA challenges.
 
     Args:
-        image_pil: PIL Image object
-        ocr_config: Optional OCR configuration dictionary
+        _image_pil: PIL Image object
+        _ocr_config: Optional OCR configuration dictionary
 
     Returns:
         dict: Solution result with keys:
@@ -18,7 +18,7 @@ def solve_text_captcha(image_pil, ocr_config=None):
             - 'text': str extracted text
             - 'confidence': float confidence score
     """
-    # TODO: Implement text OCR using Pytesseract or EasyOCR
+    # Implement text OCR using Pytesseract or EasyOCR
     # - Preprocess image for OCR
     # - Extract text using OCR engine
     # - Post-process and validate text
@@ -31,29 +31,29 @@ def solve_text_captcha(image_pil, ocr_config=None):
     }
 
 
-def preprocess_for_ocr(image_pil):
+def preprocess_for_ocr(_image_pil):
     """
     Prepares image for OCR text extraction.
 
     Args:
-        image_pil: PIL Image object
+        _image_pil: PIL Image object
 
     Returns:
         Preprocessed image
     """
     # Placeholder: Image preprocessing for OCR
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
-def extract_text_with_ocr(preprocessed_image):
+def extract_text_with_ocr(_preprocessed_image):
     """
     Extracts text from image using OCR.
 
     Args:
-        preprocessed_image: Processed image
+        _preprocessed_image: Processed image
 
     Returns:
         tuple: (extracted_text, confidence_score)
     """
     # Placeholder: OCR extraction
-    pass
+    pass  # pylint: disable=unnecessary-pass

@@ -1,0 +1,28 @@
+[MASTER]
+# Specify a configuration file
+ignore-patterns=test_.*?py
+jobs=0
+
+[MESSAGES CONTROL]
+# Disable specific warnings
+disable=
+    E1101,  # no-member (cv2 false positives)
+    W0212,  # protected-access
+    C0114,  # missing-module-docstring
+    C0116,  # missing-function-docstring
+    R0903,  # too-few-public-methods
+
+[VARIABLES]
+# Ignore unused arguments with leading underscore
+ignored-argument-names=_.*
+
+[DESIGN]
+max-locals=20
+max-branches=20
+
+[FORMAT]
+max-line-length=120
+
+[TYPECHECK]
+# Generated members for dynamic modules
+generated-members=cv2.*,numpy.*
