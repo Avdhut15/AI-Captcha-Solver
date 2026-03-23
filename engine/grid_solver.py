@@ -10,7 +10,7 @@ import streamlit as st
 @st.cache_resource
 def load_yolo_model():
     """Loads YOLOv8 model with caching for efficiency."""
-    from ultralytics import YOLO
+    from ultralytics import YOLO  # pylint: disable=import-outside-toplevel
     return YOLO('yolov8n.pt')
 
 
@@ -160,5 +160,5 @@ def draw_visual_results(image_pil, grid_size, selected_squares):
     result_img = cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)
 
     # Convert back to RGB
-    from PIL import Image
+    from PIL import Image  # pylint: disable=import-outside-toplevel
     return Image.fromarray(cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB))
