@@ -22,7 +22,7 @@ This project utilizes a **"Two-Brain Architecture"** to process intentionally ob
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/Avdhut15/AI-Captcha-Solver.git](https://github.com/Avdhut15/AI-Captcha-Solver.git)
+   git clone https://github.com/Avdhut15/AI-Captcha-Solver.git
    cd AI-Captcha-Solver
    ```
 2. **Install the required dependencies:**
